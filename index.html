@@ -1,0 +1,1397 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Daily Task Master 2026 - Weighted</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        :root {
+            --bg: #FDFDFD;
+            --primary: #B2AC88;
+            --text: #333;
+            --today-border: #859B7B;
+            --past-day: #E6E6FA;
+            --modal-bg: rgba(255, 255, 255, 0.95);
+        }
+
+        /* --- SPLASH SCREEN --- */
+        #splash-screen {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: #FFFFFF;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            transition: opacity 0.5s ease;
+        }
+
+        .splash-logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .splash-logo svg { width: 40px; height: 40px; }
+
+        .splash-text {
+            font-family: 'Inter', sans-serif;
+            font-size: 28px;
+            font-weight: 500;
+            color: #B2AC88;
+            letter-spacing: -0.5px;
+        }
+
+        .progress-container {
+            width: 140px;
+            height: 3px;
+            background: #F0F0F0;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            width: 0%;
+            height: 100%;
+            background: #B2AC88;
+            transition: width 1.5s ease-in-out;
+        }
+
+        .fade-out { opacity: 0; pointer-events: none; }
+
+        body { font-family: 'Inter', sans-serif; background-color: var(--bg); margin: 0; padding: 8px; color: var(--text); }
+        .container { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 10px; }
+        .card { background: white; border-radius: 15px; padding: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.03); text-align: center; }
+        .achievement-container { background: white; border-radius: 15px; padding: 12px; border: 1px solid #F0F0F0; margin-bottom: 5px; }
+        .ach-title { font-size: 13px; font-weight: 800; color: #B2AC88; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .ach-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .ach-section { background: #fcfcfc; padding: 8px; border-radius: 10px; border: 1px solid #f8f8f8; }
+        .ach-label { font-size: 10px; font-weight: bold; color: #AAA; margin-bottom: 3px; text-transform: uppercase; }
+        .ach-value { font-size: 14px; font-weight: 800; color: #555; margin-bottom: 5px; }
+        .medal-badge { font-size: 11px; font-weight: bold; padding: 3px 6px; border-radius: 20px; background: #EEE; color: #999; display: inline-block; }
+        .medal-badge.active { background: #FFF9C4; color: #856404; border: 1px solid #FFEBA1; }
+        
+        .calendar-nav { display: flex; overflow-x: auto; gap: 6px; padding: 15px 0 5px 0; scrollbar-width: none; }
+        .calendar-nav::-webkit-scrollbar { display: none; }
+        .day-pill { 
+            min-width: 45px; padding: 8px 4px; background: #fff; border-radius: 10px; border: 1px solid #F0F0F0;
+            cursor: pointer; text-align: center; flex-shrink: 0; transition: 0.2s; position: relative;
+        }
+        .day-pill.is-today { border: 2px solid var(--today-border); }
+        .day-pill.is-today::after { 
+            content: 'TODAY'; position: absolute; top: -14px; left: 50%; transform: translateX(-50%); 
+            font-size: 7px; background: var(--today-border); color: white; padding: 1px 4px; border-radius: 3px; font-weight: bold;
+        }
+        .day-pill.active { background: #FFF9C4 !important; border-color: #FFEB3B; }
+        .day-pill.is-past { background: var(--past-day); }
+        .day-pill .date-num { font-size: 16px; font-weight: 800; display: block; }
+
+        /* --- ADVANCED FOCUS TIMER --- */
+        .timer-wrapper { max-height: 0; overflow: hidden; transition: max-height 0.4s ease-out, margin-top 0.4s ease, opacity 0.4s ease; opacity: 0; margin-top: 0; }
+        .timer-wrapper.open { max-height: 800px; opacity: 1; margin-top: 5px; }
+        
+        .timer-card { 
+            background: rgba(255, 255, 255, 0.65); 
+            backdrop-filter: blur(12px); 
+            -webkit-backdrop-filter: blur(12px); 
+            border: 1px solid rgba(255, 255, 255, 0.5); 
+            border-radius: 24px; 
+            padding: 25px; 
+            box-shadow: 0 8px 32px rgba(0,0,0,0.05); 
+            margin-bottom: 5px; 
+        }
+        .t-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+        .t-title { font-size: 13px; font-weight: 800; color: #6C757D; display: flex; align-items: center; gap: 6px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .t-tabs { display: flex; gap: 8px; background: rgba(0,0,0,0.03); padding: 4px; border-radius: 24px; }
+        .t-tab { padding: 8px 16px; border-radius: 20px; font-size: 12px; font-weight: 700; cursor: pointer; background: transparent; color: #777; border: none; transition: all 0.3s ease; }
+        .t-tab.active { background: #FFFFFF; color: #85A089; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
+        
+        .t-display-area { text-align: center; position: relative; }
+        
+        /* Circular Timer UI */
+        .timer-ring-wrapper { position: relative; width: 220px; height: 220px; margin: 0 auto 20px auto; display: flex; align-items: center; justify-content: center; }
+        .progress-ring__circle { transition: stroke-dashoffset 1s linear; transform: rotate(-90deg); transform-origin: 50% 50%; }
+        .t-time-container { position: absolute; display: flex; flex-direction: column; align-items: center; }
+        .t-time { font-size: 48px; font-weight: 800; color: #2E343A; line-height: 1; letter-spacing: -1.5px; }
+        .t-subtitle { font-size: 12px; font-weight: 600; color: #A0AAB2; margin-top: 5px; text-transform: uppercase; letter-spacing: 1px; }
+        
+        .t-adjust-btns { display: flex; gap: 15px; justify-content: center; margin-bottom: 25px; }
+        .t-adjust-btn { background: #F8F9FA; border: 1px solid #E9ECEF; border-radius: 12px; padding: 6px 14px; font-size: 13px; font-weight: 700; color: #6C757D; cursor: pointer; transition: 0.2s; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+        .t-adjust-btn:hover { background: #E9ECEF; transform: translateY(-1px); }
+        .t-adjust-btn:active { transform: translateY(1px); }
+
+        .t-controls { display: flex; gap: 15px; justify-content: center; }
+        .t-btn { flex: 1; max-width: 150px; padding: 14px; border-radius: 18px; font-size: 15px; font-weight: 700; cursor: pointer; border: none; display: flex; align-items: center; justify-content: center; gap: 8px; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        .t-btn:active { transform: scale(0.96); box-shadow: 0 2px 6px rgba(0,0,0,0.05); }
+        .btn-start { background: linear-gradient(135deg, #85A089, #A3B19B); color: white; }
+        .btn-reset { background: #FFFFFF; color: #495057; border: 1px solid #E9ECEF; }
+        
+        /* Session & Soundscapes */
+        .t-footer-options { display: flex; flex-direction: column; align-items: center; margin-top: 25px; padding-top: 20px; border-top: 1px solid rgba(0,0,0,0.04); }
+        .t-dots { display: flex; justify-content: center; gap: 8px; margin-bottom: 15px; }
+        .t-dot { width: 10px; height: 10px; border-radius: 50%; background: #E9ECEF; transition: 0.3s; }
+        .t-dot.active { background: #85A089; box-shadow: 0 0 8px rgba(133, 160, 137, 0.4); }
+        
+        .soundscapes { display: flex; gap: 10px; }
+        .sound-btn { background: rgba(255,255,255,0.5); border: 1px solid #E9ECEF; padding: 8px 16px; border-radius: 20px; font-size: 11px; font-weight: 700; cursor: pointer; color: #8A939B; transition: 0.3s; display: flex; align-items: center; gap: 6px; }
+        .sound-btn.active { background: #F3F1EC; color: #85A089; border-color: #E2DFD2; }
+
+        /* --- MONTHLY HEATMAP --- */
+        .hm-card { background: white; border-radius: 20px; padding: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.04); margin-bottom: 5px; }
+        .hm-title { font-size: 14px; font-weight: 800; color: #6C757D; display: flex; align-items: center; gap: 8px; margin-bottom: 15px; text-transform: uppercase; }
+        .hm-grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 8px; margin-bottom: 15px; }
+        .hm-day { aspect-ratio: 1; background: #F3F1EC; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: #6C757D; }
+        .hm-day.outline { border: 2px solid #85A089; background: #FDFDFD; }
+        .hm-lvl-1 { background: #C8E6C9; color: #2E7D32; }
+        .hm-lvl-2 { background: #81C784; color: white; }
+        .hm-lvl-3 { background: #4CAF50; color: white; }
+        .hm-lvl-4 { background: #2E7D32; color: white; }
+        .hm-legend { display: flex; align-items: center; gap: 6px; font-size: 13px; color: #6C757D; font-weight: 500; }
+        .hm-legend-box { width: 18px; height: 18px; border-radius: 4px; }
+        .hm-stats-card { background: white; border-radius: 20px; padding: 20px 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.04); display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+        .hm-stat { flex: 1; text-align: center; border-right: 1px solid #E9ECEF; }
+        .hm-stat:last-child { border-right: none; }
+        .hm-stat-val { font-size: 24px; font-weight: 800; color: #2E343A; margin-bottom: 4px; }
+        .hm-stat-lbl { font-size: 11px; font-weight: 600; color: #6C757D; text-transform: uppercase; }
+
+        .habit-container { border-radius: 15px; overflow: hidden; border: 1px solid #F0F0F0; margin-top: 5px; }
+        .habit-header { background: #fff; padding: 12px; text-align: left; font-size: 16px; font-weight: 800; color: #444; border-bottom: 1px solid #F8F8F8; }
+        .habit-row { display: flex; align-items: stretch; border-bottom: 1px solid #F8F8F8; min-height: 55px; cursor: pointer; user-select: none; transition: transform 0.1s; }
+        .habit-row:active { transform: scale(0.98); }
+        .habit-label { flex: 1; padding: 8px 15px; display: flex; align-items: center; justify-content: space-between; font-size: 14px; font-weight: 700; }
+        
+        .task-content { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; }
+        .task-meta { display: flex; gap: 8px; align-items: center; }
+        .task-time { font-size: 10px; opacity: 0.6; font-weight: 400; }
+        .task-pts { font-size: 10px; background: rgba(0,0,0,0.05); padding: 1px 5px; border-radius: 4px; color: var(--primary); }
+
+        .row-0 { background-color: #E8F5E9; color: #2E7D32; }
+        .row-1 { background-color: #F1F3E9; color: #556B2F; }
+        .row-2 { background-color: #E3F2FD; color: #1565C0; }
+        .row-3 { background-color: #F3E5F5; color: #6A1B9A; }
+        .row-4 { background-color: #FAF3E0; color: #8D6E63; }
+
+        .habit-check-area { width: 60px; display: flex; align-items: center; justify-content: center; background: #FFF9C4; border-left: 1px solid #F0F0F0; }
+        .custom-checkbox { width: 26px; height: 26px; border: 2px solid #CCC; border-radius: 6px; background: white; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .custom-checkbox.checked { background: #BA68C8; border-color: #BA68C8; color: white; }
+        .custom-checkbox.checked::after { content: '✓'; font-weight: bold; font-size: 16px; }
+        .delete-btn { font-size: 12px; opacity: 0.3; padding: 5px; cursor: pointer; }
+
+        .chart-container { height: 180px; width: 100%; }
+        .input-group { display: flex; gap: 5px; margin: 5px 0; }
+        .input-group input { flex: 1; padding: 10px; border-radius: 10px; border: 1px solid #EEE; outline: none; font-size: 14px; }
+        #ptsInput { width: 60px; flex: none; text-align: center; }
+        .input-group button { background: var(--primary); color: white; border: none; padding: 0 15px; border-radius: 10px; font-weight: bold; }
+
+        /* --- MODALS --- */
+        .modal { 
+            display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.4); backdrop-filter: blur(4px); align-items: center; justify-content: center; 
+        }
+        .modal-content { 
+            background: var(--modal-bg); padding: 25px; border-radius: 20px; width: 85%; max-width: 350px; 
+            text-align: center; box-shadow: 0 15px 35px rgba(0,0,0,0.1);
+            animation: slideUp 0.3s ease-out;
+            border: 1px solid rgba(255,255,255,0.5);
+        }
+        @keyframes slideUp {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .modal-content h4 { margin: 0 0 15px 0; color: var(--primary); font-size: 16px; text-transform: uppercase; letter-spacing: 1px; }
+        .modal-input { 
+            width: 100%; padding: 12px; border-radius: 12px; border: 1px solid #EEE; margin-bottom: 10px; 
+            outline: none; font-size: 15px; text-align: center; box-sizing: border-box; background: rgba(255,255,255,0.8);
+        }
+        .modal-btns { display: flex; gap: 10px; }
+        .modal-btns button { 
+            flex: 1; padding: 12px; border-radius: 12px; border: none; font-weight: 800; cursor: pointer; transition: 0.2s; 
+        }
+        .btn-confirm { background: var(--primary); color: white; }
+        .btn-cancel { background: #F5F5F5; color: #999; }
+
+        /* --- NEW BOTTOM SHEET EXPORT MODAL --- */
+        .bottom-modal { align-items: flex-end; padding-bottom: 0; }
+        .bottom-sheet-content { 
+            background: var(--modal-bg); 
+            width: 100%; 
+            max-width: 600px;
+            border-radius: 28px 28px 0 0; 
+            padding: 20px 25px 40px 25px; 
+            box-sizing: border-box;
+            box-shadow: 0 -10px 40px rgba(0,0,0,0.1);
+            animation: slideUpSheet 0.3s cubic-bezier(0.1, 0.9, 0.2, 1);
+        }
+        @keyframes slideUpSheet {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+        .sheet-handle { width: 40px; height: 5px; background: #E0E0E0; border-radius: 10px; margin: 0 auto 20px auto; }
+        .sheet-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+        .sheet-title { display: flex; align-items: center; gap: 10px; font-size: 19px; font-weight: 800; color: #222; }
+        .close-sheet { width: 32px; height: 32px; background: #F5F5F5; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; color: #555; cursor: pointer; transition: 0.2s; }
+        .close-sheet:active { background: #EAEAEA; transform: scale(0.9); }
+        .sheet-subtitle { font-size: 13px; color: #777; margin-top: 0; margin-bottom: 20px; text-align: left; }
+        
+        .export-option { 
+            background: #F6F5F0; /* Soft beige matching minimalist UI */
+            border-radius: 18px; 
+            padding: 16px; 
+            display: flex; 
+            align-items: center; 
+            gap: 16px; 
+            margin-bottom: 12px; 
+            cursor: pointer; 
+            transition: all 0.2s ease;
+            border: 1px solid #EFECE1;
+        }
+        .export-option:active { transform: scale(0.97); background: #EFECE1; }
+        .opt-icon { font-size: 26px; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; }
+        .opt-text { text-align: left; display: flex; flex-direction: column; gap: 2px; }
+        .opt-title { font-size: 15px; font-weight: 700; color: #333; }
+        .opt-desc { font-size: 12px; color: #888; }
+
+        #custom-toast {
+            visibility: hidden;
+            min-width: 180px;
+            background-color: #333;
+            color: #fff;
+            text-align: center;
+            border-radius: 50px;
+            padding: 10px 20px;
+            position: fixed;
+            z-index: 10001;
+            left: 50%;
+            bottom: 50px;
+            transform: translateX(-50%);
+            font-size: 13px;
+            font-weight: 600;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+            transition: visibility 0s, opacity 0.4s ease-in-out, transform 0.4s ease-in-out;
+            opacity: 0;
+        }
+        #custom-toast.show {
+            visibility: visible;
+            opacity: 1;
+            transform: translateX(-50%) translateY(-10px);
+        }
+        
+        .dev-sig { text-align: center; font-size: 10px; color: #E6E6FA; opacity: 0.6; margin-top: 15px; margin-bottom: 20px; font-weight: bold; text-transform: uppercase; letter-spacing: 1px; }
+
+        .history-container { 
+            max-height: 0; overflow: hidden; background: white; border-radius: 15px; border: 1px solid transparent; 
+            margin-top: 0; padding: 0 12px; transition: max-height 0.4s ease-out, padding 0.4s ease, margin-top 0.4s ease, border 0.2s ease; opacity: 0;
+        }
+        .history-container.open { max-height: 1000px; padding: 12px; margin-top: 5px; border: 1px solid #F0F0F0; opacity: 1; }
+        .history-title { font-size: 10px; font-weight: 800; color: #AAA; text-align: left; margin-bottom: 10px; text-transform: uppercase; }
+        .history-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #F9F9F9; }
+        .history-item:last-child { border-bottom: none; }
+        .history-task-name { font-size: 14px; font-weight: 600; color: #444; }
+        .history-stats { text-align: right; }
+        .history-perc { font-size: 14px; font-weight: 800; color: #B2AC88; }
+        .history-count { font-size: 9px; color: #AAA; }
+        
+        .history-toggle-btn { 
+            width: 100%; padding: 12px; margin-top: 10px; border-radius: 10px; border: 1px solid #EEE; 
+            background: #FFF; color: #AAA; font-size: 11px; font-weight: bold; cursor: pointer; 
+            text-transform: uppercase; letter-spacing: 0.5px; transition: all 0.3s ease;
+        }
+        .history-toggle-btn.active { background: #FDFDFD; color: #FF5252; border-color: #FF5252; }
+        
+        .timer-toggle-btn {
+            width: 100%; padding: 12px; margin-top: 10px; border-radius: 10px; border: 1px solid #E9ECEF; 
+            background: #FFF; color: #6C757D; font-size: 11px; font-weight: bold; cursor: pointer; 
+            text-transform: uppercase; letter-spacing: 0.5px; transition: all 0.3s ease;
+        }
+        .timer-toggle-btn.active { background: #FDFDFD; color: #85A089; border-color: #85A089; }
+
+        /* --- AI ASSISTANT CSS --- */
+        .ai-fab {
+            position: fixed;
+            bottom: 25px;
+            right: 25px;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #B2AC88, #859B7B);
+            color: white;
+            font-size: 26px;
+            border: none;
+            box-shadow: 0 6px 20px rgba(133, 155, 123, 0.4);
+            cursor: pointer;
+            z-index: 999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .ai-fab:active { transform: scale(0.9); }
+        .ai-fab:hover { transform: scale(1.05); }
+
+        .ai-chat-content {
+            background: var(--modal-bg);
+            width: 92%;
+            max-width: 420px;
+            height: 75vh;
+            max-height: 600px;
+            border-radius: 24px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            box-shadow: 0 20px 50px rgba(0,0,0,0.15);
+            animation: slideUp 0.3s cubic-bezier(0.1, 0.9, 0.2, 1);
+            border: 1px solid rgba(255,255,255,0.6);
+        }
+        .ai-header {
+            background: linear-gradient(135deg, #B2AC88, #859B7B);
+            color: white;
+            padding: 18px 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-weight: 800;
+            font-size: 15px;
+            letter-spacing: 0.5px;
+        }
+        .ai-close { 
+            cursor: pointer; 
+            font-size: 22px; 
+            line-height: 1; 
+            width: 30px; 
+            height: 30px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+            border-radius: 50%; 
+            background: rgba(255,255,255,0.2); 
+            transition: 0.2s;
+        }
+        .ai-close:active { background: rgba(255,255,255,0.4); transform: scale(0.9); }
+        .ai-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            background: #fafafa;
+        }
+        .ai-msg {
+            max-width: 82%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            font-size: 13.5px;
+            line-height: 1.5;
+            word-wrap: break-word;
+        }
+        .ai-msg.user {
+            background: #E8F5E9;
+            color: #2E7D32;
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+        }
+        .ai-msg.bot {
+            background: white;
+            color: #444;
+            border: 1px solid #EEE;
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+        }
+        .ai-input-area {
+            padding: 15px;
+            background: white;
+            border-top: 1px solid #F0F0F0;
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        .ai-input-area input {
+            flex: 1;
+            padding: 12px 18px;
+            border: 1px solid #E0E0E0;
+            border-radius: 25px;
+            outline: none;
+            font-size: 14px;
+            background: #F9F9F9;
+            transition: border-color 0.2s;
+        }
+        .ai-input-area input:focus { border-color: #859B7B; background: white; }
+        .ai-input-area button {
+            background: #859B7B;
+            color: white;
+            border: none;
+            border-radius: 25px;
+            padding: 0 20px;
+            height: 42px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s, background 0.2s;
+        }
+        .ai-input-area button:active { transform: scale(0.95); background: #718667; }
+        .ai-typing {
+            font-size: 11px;
+            color: #888;
+            align-self: flex-start;
+            margin-left: 10px;
+            margin-bottom: 10px;
+            font-weight: 600;
+            display: none;
+            animation: pulse 1s infinite alternate;
+        }
+        @keyframes pulse { from { opacity: 0.6; } to { opacity: 1; } }
+    </style>
+</head>
+<body>
+
+<div id="splash-screen">
+    <div class="splash-logo">
+        <svg viewBox="0 0 24 24" fill="#689F38">
+            <path d="M17,8C8,10 5.9,16.17 3.82,21.34L5.71,22L6.66,19.7C7.14,19.87 7.64,20 8,20C19,20 22,3 22,3C21,5 14,5.25 9,6.25C4,7.25 2,11.5 2,13.5C2,15.5 3.75,17.25 3.75,17.25C7,11 17,8 17,8Z" />
+        </svg>
+        <span class="splash-text">Habit Master Pro</span>
+    </div>
+    <div class="progress-container">
+        <div class="progress-bar" id="load-bar"></div>
+    </div>
+</div>
+
+<div id="custom-toast">Message here</div>
+
+<div class="container">
+    <div style="display:flex; justify-content:space-between; align-items:center; padding: 5px 10px;">
+        <h3 style="margin:0; color:var(--primary); font-size: 17px;">Task Master</h3>
+        <div style="display: flex; gap: 5px;">
+            <select id="monthSelect" onchange="initCalendar()" style="border:none; font-weight:bold; background:none; font-size: 13px; text-align: right;">
+                <option>January</option><option>February</option><option>March</option>
+                <option>April</option><option>May</option><option>June</option>
+                <option>July</option><option>August</option><option>September</option>
+                <option>October</option><option>November</option><option>December</option>
+            </select>
+            <select id="yearSelect" onchange="initCalendar()" style="border:none; font-weight:bold; background:none; font-size: 13px;"></select>
+        </div>
+    </div>
+
+    <div class="achievement-container">
+        <div class="ach-title">🏆 ACHIEVEMENT BOX 🏆</div>
+        <div class="ach-grid">
+            <div class="ach-section">
+                <div class="ach-label">Weighted Progress</div>
+                <div id="dailyPercentText" class="ach-value">0%</div>
+                <div id="dailyMedal" class="medal-badge">No Medal</div>
+            </div>
+            <div class="ach-section">
+                <div class="ach-label">Month Progress</div>
+                <div id="monthlyPercentText" class="ach-value">0%</div>
+                <div id="monthlyMedal" class="medal-badge">No Rank</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="calendar-nav" id="datePicker"></div>
+
+    <div class="card">
+        <div style="text-align:left; font-weight:bold; color:#AAA; font-size:10px; margin-bottom:8px;">MONTHLY PERFORMANCE (%)</div>
+        <div class="chart-container">
+            <canvas id="habitChart"></canvas>
+        </div>
+    </div>
+
+    <div class="hm-card">
+        <div class="hm-title">📅 MONTHLY HEATMAP</div>
+        <div class="hm-grid" id="heatmapGrid"></div>
+        <div class="hm-legend">
+            Less 
+            <div class="hm-legend-box hm-lvl-0" style="background:#F3F1EC"></div>
+            <div class="hm-legend-box hm-lvl-1"></div>
+            <div class="hm-legend-box hm-lvl-2"></div>
+            <div class="hm-legend-box hm-lvl-3"></div>
+            <div class="hm-legend-box hm-lvl-4"></div>
+            More
+        </div>
+    </div>
+    
+    <div class="hm-stats-card">
+        <div class="hm-stat">
+            <div class="hm-stat-val" id="hm-avg">0%</div>
+            <div class="hm-stat-lbl">AVG SCORE</div>
+        </div>
+        <div class="hm-stat">
+            <div class="hm-stat-val" id="hm-active">0</div>
+            <div class="hm-stat-lbl">ACTIVE DAYS</div>
+        </div>
+        <div class="hm-stat">
+            <div class="hm-stat-val" id="hm-best">0%</div>
+            <div class="hm-stat-lbl">BEST DAY</div>
+        </div>
+        <div class="hm-stat">
+            <div class="hm-stat-val" id="hm-tasks">0</div>
+            <div class="hm-stat-lbl">TASKS DONE</div>
+        </div>
+    </div>
+
+    <div class="habit-container">
+        <div class="habit-header" id="listTitle">DAILY TASKS</div>
+        <div id="habitList"></div>
+    </div>
+
+    <div class="input-group">
+        <input type="text" id="habitInput" placeholder="New task...">
+        <input type="number" id="ptsInput" placeholder="Pts" min="0" max="10" step="0.1" value="1">
+        <button onclick="addHabit()">ADD</button>
+    </div>
+
+    <div class="card" style="text-align:left; padding: 10px;">
+        <div style="font-weight:800; color:#AAA; font-size:10px;">DAILY JOURNAL</div>
+        <textarea id="dayNote" style="width:100%; border:none; margin-top:5px; font-size:14px; outline:none; min-height: 50px;" placeholder="How was your day?" oninput="saveNote()"></textarea>
+    </div>
+
+    <div style="display:flex; gap:8px; justify-content:center; margin-bottom: 5px; margin-top: 10px;">
+        <button onclick="openExportMenu()" style="padding:10px 15px; border-radius:10px; border:1px solid #EEE; background:white; font-size:12px; font-weight: bold; color: #444; flex:1;">💾 Save & Export</button>
+        <button onclick="openRestore()" style="padding:10px 15px; border-radius:10px; border:1px solid #EEE; background:white; font-size:12px; font-weight: bold; color: #444; flex:1;">📥 Restore</button>
+    </div>
+
+    <button class="history-toggle-btn" id="toggleBtn" onclick="toggleHistory()">📊 View Performance History</button>
+    
+    <div class="history-container" id="historyBox">
+        <div class="history-title" id="historyHeader">MONTHLY TASK PERFORMANCE (%)</div>
+        <div id="historyList"></div>
+    </div>
+
+    <button class="timer-toggle-btn" id="timerToggleBtn" onclick="toggleTimerView()">⏱️ Open Focus Timer</button>
+    
+    <div class="timer-wrapper" id="timerBox">
+        <div class="timer-card">
+            <div class="t-header">
+                <div class="t-title">⏱️ Deep Focus</div>
+                <div class="t-tabs">
+                    <button class="t-tab active" id="tab-focus" onclick="setTimerMode(25, 'tab-focus')">Focus</button>
+                    <button class="t-tab" id="tab-short" onclick="setTimerMode(5, 'tab-short')">Short</button>
+                    <button class="t-tab" id="tab-long" onclick="setTimerMode(15, 'tab-long')">Long</button>
+                </div>
+            </div>
+            
+            <div class="t-display-area">
+                <div class="timer-ring-wrapper">
+                    <svg width="220" height="220">
+                        <circle stroke="#F8F9FA" stroke-width="10" fill="transparent" r="100" cx="110" cy="110"/>
+                        <circle class="progress-ring__circle" id="ring-progress" stroke="url(#gradient)" stroke-width="10" fill="transparent" r="100" cx="110" cy="110" stroke-dasharray="628.3" stroke-dashoffset="0" stroke-linecap="round"/>
+                        <defs>
+                            <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                <stop offset="0%" stop-color="#85A089" />
+                                <stop offset="100%" stop-color="#998EB1" />
+                            </linearGradient>
+                        </defs>
+                    </svg>
+                    <div class="t-time-container">
+                        <div class="t-time" id="timerDisplay">25:00</div>
+                        <div class="t-subtitle" id="timerSubtitle">Stay Focused</div>
+                    </div>
+                </div>
+
+                <div class="t-adjust-btns">
+                    <button class="t-adjust-btn" onclick="adjustTime(-5)">-5m</button>
+                    <button class="t-adjust-btn" onclick="adjustTime(-1)">-1m</button>
+                    <button class="t-adjust-btn" onclick="adjustTime(1)">+1m</button>
+                    <button class="t-adjust-btn" onclick="adjustTime(5)">+5m</button>
+                </div>
+
+                <div class="t-controls">
+                    <button class="t-btn btn-start" onclick="toggleTimer()">▶ <span id="btn-start-text">Start</span></button>
+                    <button class="t-btn btn-reset" onclick="resetTimer()">↺ Reset</button>
+                </div>
+
+                <div class="t-footer-options">
+                    <div class="t-dots" id="sessionDots">
+                        <div class="t-dot active"></div><div class="t-dot"></div><div class="t-dot"></div><div class="t-dot"></div>
+                    </div>
+                    <div class="soundscapes">
+                        <button class="sound-btn active" id="snd-deep" onclick="toggleSound('snd-deep')">🎧 Deep Work</button>
+                        <button class="sound-btn" id="snd-rain" onclick="toggleSound('snd-rain')">🌧️ Rain</button>
+                        <button class="sound-btn" id="snd-cafe" onclick="toggleSound('snd-cafe')">☕ Cafe</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="dev-sig">Developed by pritam</div>
+</div>
+
+<button class="ai-fab" onclick="toggleAIChat()">✨</button>
+
+<div id="aiChatModal" class="modal" onclick="closeOnBackdrop(event, 'aiChatModal', toggleAIChat)">
+    <div class="ai-chat-content" onclick="event.stopPropagation()">
+        <div class="ai-header">
+            <span>🤖 AI Task Assistant</span>
+            <span class="ai-close" onclick="toggleAIChat()">×</span>
+        </div>
+        <div class="ai-messages" id="aiMessages">
+            <div class="ai-msg bot">Hi! I'm your AI assistant. I can see your daily tasks and progress. Need motivation, task breakdowns, or advice for today?</div>
+        </div>
+        <div class="ai-typing" id="aiTyping">AI is typing...</div>
+        <div class="ai-input-area">
+            <input type="text" id="aiInput" placeholder="Ask your AI assistant..." onkeypress="if(event.key === 'Enter') sendAIMessage()">
+            <button onclick="sendAIMessage()">Send</button>
+        </div>
+    </div>
+</div>
+
+<div id="exportMenuModal" class="modal bottom-modal" onclick="closeOnBackdrop(event, 'exportMenuModal', closeExportMenu)">
+    <div class="bottom-sheet-content" onclick="event.stopPropagation()">
+        <div class="sheet-handle"></div>
+        <div class="sheet-header">
+            <div class="sheet-title">💾 Save & Export</div>
+            <div class="close-sheet" onclick="closeExportMenu()">×</div>
+        </div>
+        <p class="sheet-subtitle">Choose how to save your data.</p>
+        
+        <div class="export-option" onclick="shareDataViaApp()">
+            <div class="opt-icon">📤</div>
+            <div class="opt-text">
+                <div class="opt-title">Share Data</div>
+                <div class="opt-desc">Share via WhatsApp, Email, Notes...</div>
+            </div>
+        </div>
+
+        <div class="export-option" onclick="downloadJSONFile()">
+            <div class="opt-icon">📄</div>
+            <div class="opt-text">
+                <div class="opt-title">Download JSON File</div>
+                <div class="opt-desc">Save backup file to device</div>
+            </div>
+        </div>
+
+        <div class="export-option" onclick="exportTextReport()">
+            <div class="opt-icon">📝</div>
+            <div class="opt-text">
+                <div class="opt-title">Export Text Report</div>
+                <div class="opt-desc">Human-readable summary</div>
+            </div>
+        </div>
+
+        <div class="export-option" onclick="triggerOldGenerateCode()">
+            <div class="opt-icon">🔑</div>
+            <div class="opt-text">
+                <div class="opt-title">Generate Backup Code</div>
+                <div class="opt-desc">Copy a code string manually</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="dataModal" class="modal"><div class="modal-content">
+    <h4 id="modalTitle">Data</h4>
+    <textarea id="dataArea" style="width:100%; height:100px; margin-bottom:10px; padding:10px; border-radius:10px; border:1px solid #EEE;"></textarea>
+    <button onclick="processData()" id="modalBtn" style="width:100%; padding:10px; background:var(--primary); color:white; border:none; border-radius:8px; font-weight:bold;">Action</button>
+    <p onclick="closeModal()" style="margin-top:10px; cursor:pointer; color:#AAA; font-size:11px;">Cancel</p>
+</div></div>
+
+<div id="editModal" class="modal">
+    <div class="modal-content">
+        <h4>Correction</h4>
+        <input type="text" id="editInput" class="modal-input" placeholder="Task name">
+        <input type="number" id="editPtsInput" class="modal-input" placeholder="Points" min="0" max="10" step="0.1">
+        <div class="modal-btns">
+            <button class="btn-cancel" onclick="closeEditModal()">Cancel</button>
+            <button class="btn-confirm" id="saveEditBtn">Save</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    let allData = JSON.parse(localStorage.getItem('HabitPro_Daily_Mode')) || {};
+    let notesData = JSON.parse(localStorage.getItem('HabitPro_Notes_Daily')) || {};
+    
+    const todayObj = new Date();
+    const realToday = todayObj.getDate();
+    const realMonth = todayObj.getMonth();
+    const realYear = todayObj.getFullYear();
+    
+    let selectedDay = realToday;
+    let selectedMonth = "";
+    let selectedYear = realYear;
+    let currentEditIdx = null;
+    
+    const monthsArr = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+    const dayNames = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+    let myChart;
+
+    let timerTime = 25 * 60;
+    let timerMax = 25 * 60;
+    let timerInterval = null;
+    let isTimerRunning = false;
+    let currentSession = 1;
+    const circleCircumference = 628.3;
+
+    window.onload = function() {
+        const yearSelect = document.getElementById('yearSelect');
+        for(let y = 2026; y <= 2032; y++) {
+            let opt = document.createElement('option');
+            opt.value = y;
+            opt.innerHTML = y;
+            if(y === realYear) opt.selected = true;
+            yearSelect.appendChild(opt);
+        }
+
+        document.getElementById('load-bar').style.width = '100%';
+        selectedMonth = monthsArr[realMonth];
+        document.getElementById('monthSelect').value = selectedMonth;
+        
+        initChart();
+        initCalendar();
+        updateTimerDisplay();
+
+        setTimeout(() => {
+            document.getElementById('splash-screen').classList.add('fade-out');
+        }, 1800);
+    };
+
+    /* ==========================================
+       NEW EXPORT MENU LOGIC
+       ========================================== */
+    function openExportMenu() {
+        document.getElementById('exportMenuModal').style.display = 'flex';
+    }
+
+    function closeExportMenu() {
+        document.getElementById('exportMenuModal').style.display = 'none';
+    }
+
+    function closeOnBackdrop(event, modalId, closeFunc) {
+        if(event.target.id === modalId) {
+            closeFunc();
+        }
+    }
+
+    // 1. Share via App
+    async function shareDataViaApp() {
+        const dataStr = btoa(JSON.stringify({allData, notesData}));
+        const shareText = `Here is my Habit Master Backup Code. Copy the code below and restore it in the app:\n\n${dataStr}`;
+        if (navigator.share) {
+            try {
+                await navigator.share({
+                    title: 'Habit Master Backup',
+                    text: shareText
+                });
+                closeExportMenu();
+            } catch(e) { console.log("Share cancelled or failed.", e); }
+        } else {
+            showToast("Share API not supported on this device.");
+        }
+    }
+
+    // 2. Download JSON
+    function downloadJSONFile() {
+        const data = { allData, notesData };
+        const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `HabitMaster_Backup_${selectedDay}_${selectedMonth}_${selectedYear}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        closeExportMenu();
+        showToast("JSON File Downloaded! 📁");
+    }
+
+    // 3. Export Text Report
+    function exportTextReport() {
+        const key = `${selectedYear}_${selectedMonth}_${selectedDay}`;
+        const habits = allData[key] || [];
+        const note = notesData[key] || "No journal entry.";
+        
+        let report = `📊 Daily Report: ${selectedDay} ${selectedMonth} ${selectedYear}\n`;
+        report += `-------------------------\n\n`;
+        report += `TASKS:\n`;
+        
+        if(habits.length === 0) {
+            report += `- No tasks tracked today.\n`;
+        } else {
+            habits.forEach(h => {
+                report += `${h.done ? '✅' : '❌'} ${h.text} (${h.points} pts)\n`;
+            });
+        }
+        
+        report += `\nJOURNAL:\n${note}\n`;
+        
+        navigator.clipboard.writeText(report);
+        closeExportMenu();
+        showToast("Report Copied to Clipboard! 📝");
+    }
+
+    // 4. Trigger Old Generate Backup Code
+    function triggerOldGenerateCode() {
+        closeExportMenu();
+        openExport(); 
+    }
+
+
+    /* ==========================================
+       ADVANCED TIMER LOGIC
+       ========================================== */
+    function toggleTimerView() {
+        const box = document.getElementById('timerBox');
+        const btn = document.getElementById('timerToggleBtn');
+        box.classList.toggle('open');
+        btn.classList.toggle('active');
+        if(box.classList.contains('open')) {
+            btn.innerText = "✖ Close Focus Timer";
+            setTimeout(() => { box.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 100);
+        } else {
+            btn.innerText = "⏱️ Open Focus Timer";
+        }
+    }
+
+    function setTimerMode(mins, btnId) {
+        clearInterval(timerInterval);
+        isTimerRunning = false;
+        document.getElementById('btn-start-text').innerText = 'Start';
+        timerTime = mins * 60;
+        timerMax = mins * 60;
+        
+        document.querySelectorAll('.t-tab').forEach(b => b.classList.remove('active'));
+        document.getElementById(btnId).classList.add('active');
+        
+        if(mins === 25) document.getElementById('timerSubtitle').innerText = "Stay Focused";
+        else document.getElementById('timerSubtitle').innerText = "Take a Break";
+        
+        updateTimerDisplay();
+    }
+
+    function adjustTime(mins) {
+        if(isTimerRunning) return; 
+        timerTime += (mins * 60);
+        if(timerTime < 60) timerTime = 60; 
+        timerMax = timerTime;
+        updateTimerDisplay();
+    }
+    
+    function updateTimerDisplay() {
+        let m = Math.floor(timerTime / 60);
+        let s = timerTime % 60;
+        document.getElementById('timerDisplay').innerText = `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+        
+        let progRatio = timerTime / timerMax;
+        let offset = circleCircumference - (progRatio * circleCircumference);
+        document.getElementById('ring-progress').style.strokeDashoffset = offset;
+    }
+    
+    function toggleTimer() {
+        if(isTimerRunning) {
+            clearInterval(timerInterval);
+            isTimerRunning = false;
+            document.getElementById('btn-start-text').innerText = 'Resume';
+        } else {
+            isTimerRunning = true;
+            document.getElementById('btn-start-text').innerText = 'Pause';
+            timerInterval = setInterval(() => {
+                if(timerTime > 0) {
+                    timerTime--;
+                    updateTimerDisplay();
+                } else {
+                    clearInterval(timerInterval);
+                    isTimerRunning = false;
+                    document.getElementById('btn-start-text').innerText = 'Start';
+                    showToast("Session Complete!");
+                    confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+                    advanceSession();
+                }
+            }, 1000);
+        }
+    }
+    
+    function resetTimer() {
+        clearInterval(timerInterval);
+        isTimerRunning = false;
+        document.getElementById('btn-start-text').innerText = 'Start';
+        timerTime = timerMax;
+        updateTimerDisplay();
+    }
+
+    function advanceSession() {
+        if(currentSession < 4) {
+            currentSession++;
+            const dots = document.getElementById('sessionDots').children;
+            for(let i=0; i<dots.length; i++) {
+                if(i < currentSession) dots[i].classList.add('active');
+            }
+        }
+    }
+
+    function toggleSound(btnId) {
+        document.querySelectorAll('.sound-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById(btnId).classList.add('active');
+        showToast("Audio channel switched!");
+    }
+
+    function showToast(msg) {
+        const toast = document.getElementById("custom-toast");
+        toast.innerText = msg;
+        toast.className = "show";
+        setTimeout(() => { toast.className = toast.className.replace("show", ""); }, 2500);
+    }
+
+    /* ==========================================
+       EXISTING HABIT, CHART & UI LOGIC
+       ========================================== */
+    function initCalendar() {
+        selectedMonth = document.getElementById('monthSelect').value;
+        selectedYear = parseInt(document.getElementById('yearSelect').value);
+        const picker = document.getElementById('datePicker');
+        picker.innerHTML = '';
+        const daysInMonth = new Date(selectedYear, monthsArr.indexOf(selectedMonth) + 1, 0).getDate();
+        
+        for (let i = 1; i <= daysInMonth; i++) {
+            const dateObj = new Date(selectedYear, monthsArr.indexOf(selectedMonth), i);
+            const isToday = (i === realToday && selectedMonth === monthsArr[realMonth] && selectedYear === realYear);
+            const isPast = (dateObj < new Date(realYear, realMonth, realToday)); 
+            
+            const pill = document.createElement('div');
+            pill.className = `day-pill ${i === selectedDay ? 'active' : ''} ${isToday ? 'is-today' : ''} ${isPast && !isToday ? 'is-past' : ''}`;
+            pill.innerHTML = `<span style="font-size:9px; color:#AAA;">${dayNames[dateObj.getDay()]}</span><span class="date-num">${i}</span>`;
+            pill.onclick = () => { selectedDay = i; updateUI(); };
+            picker.appendChild(pill);
+            if(i === selectedDay) pill.scrollIntoView({ inline: 'center', behavior: 'smooth' });
+        }
+        updateUI();
+    }
+
+    function toggleHistory() {
+        const box = document.getElementById('historyBox');
+        const btn = document.getElementById('toggleBtn');
+        box.classList.toggle('open');
+        btn.classList.toggle('active');
+        if(box.classList.contains('open')) {
+            btn.innerText = "✖ Close History";
+            setTimeout(() => { box.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 100);
+        } else {
+            btn.innerText = "📊 View Performance History";
+        }
+    }
+
+    function calculateDailyScore(habits) {
+        if (!habits || habits.length === 0) return 0;
+        let totalPoints = 0;
+        let earnedPoints = 0;
+        habits.forEach(h => {
+            const pts = parseFloat(h.points) || 0;
+            totalPoints += pts;
+            if (h.done) earnedPoints += pts;
+        });
+        if (totalPoints === 0) return 0;
+        return Math.round((earnedPoints / totalPoints) * 100);
+    }
+
+    function calculateAchievements() {
+        const key = `${selectedYear}_${selectedMonth}_${selectedDay}`;
+        const habits = allData[key] || [];
+        const dailyPercent = calculateDailyScore(habits);
+        document.getElementById('dailyPercentText').innerText = dailyPercent + "%";
+        
+        let dailyMedal = "No Medal";
+        if(dailyPercent >= 90) dailyMedal = "🥇 GOLD";
+        else if(dailyPercent >= 80) dailyMedal = "🥈 SILVER";
+        else if(dailyPercent >= 60) dailyMedal = "🥉 COPPER";
+        
+        const dBadge = document.getElementById('dailyMedal');
+        dBadge.innerText = dailyMedal;
+        dBadge.className = dailyPercent >= 60 ? 'medal-badge active' : 'medal-badge';
+
+        const daysInMonth = new Date(selectedYear, monthsArr.indexOf(selectedMonth) + 1, 0).getDate();
+        let totalScoreSum = 0;
+        let trackedDays = 0;
+        for(let i=1; i<=daysInMonth; i++) {
+            const mKey = `${selectedYear}_${selectedMonth}_${i}`;
+            const mHabits = allData[mKey] || [];
+            if(mHabits.length > 0) {
+                totalScoreSum += calculateDailyScore(mHabits);
+                trackedDays++;
+            }
+        }
+        const avgMonthly = trackedDays ? Math.round(totalScoreSum / trackedDays) : 0;
+        document.getElementById('monthlyPercentText').innerText = avgMonthly + "%";
+        
+        let monthlyMedal = "No Rank";
+        if(avgMonthly >= 90) monthlyMedal = "👑 CHAMP";
+        else if(avgMonthly >= 80) monthlyMedal = "🥈 SILVER";
+        else if(avgMonthly >= 60) monthlyMedal = "🥉 COPPER";
+
+        const mBadge = document.getElementById('monthlyMedal');
+        mBadge.innerText = monthlyMedal;
+        mBadge.className = avgMonthly >= 60 ? 'medal-badge active' : 'medal-badge';
+    }
+
+    function renderHeatmapAndStats() {
+        const grid = document.getElementById('heatmapGrid');
+        grid.innerHTML = '';
+        const daysInMonth = new Date(selectedYear, monthsArr.indexOf(selectedMonth) + 1, 0).getDate();
+        
+        let totalScores = 0;
+        let activeDaysCount = 0;
+        let bestDayScore = 0;
+        let tasksDoneTotal = 0;
+
+        for(let i = 1; i <= daysInMonth; i++) {
+            const habits = allData[`${selectedYear}_${selectedMonth}_${i}`] || [];
+            const score = calculateDailyScore(habits);
+            let doneCount = habits.filter(h => h.done).length;
+            tasksDoneTotal += doneCount;
+
+            if(habits.length > 0) {
+                totalScores += score;
+                if(score > 0) activeDaysCount++;
+                if(score > bestDayScore) bestDayScore = score;
+            }
+
+            let lvl = 0;
+            if(score > 0) lvl = 1;
+            if(score > 35) lvl = 2;
+            if(score > 70) lvl = 3;
+            if(score >= 95) lvl = 4;
+
+            const isTargetDay = (i === selectedDay);
+            grid.innerHTML += `<div class="hm-day hm-lvl-${lvl} ${isTargetDay ? 'outline' : ''}" onclick="selectedDay=${i}; updateUI();">${i}</div>`;
+        }
+
+        const avgScore = activeDaysCount ? Math.round(totalScores / activeDaysCount) : 0;
+        document.getElementById('hm-avg').innerText = avgScore + '%';
+        document.getElementById('hm-active').innerText = activeDaysCount;
+        document.getElementById('hm-best').innerText = bestDayScore + '%';
+        document.getElementById('hm-tasks').innerText = tasksDoneTotal;
+    }
+
+    function renderPerformanceHistory() {
+        const historyList = document.getElementById('historyList');
+        document.getElementById('historyHeader').innerText = `${selectedMonth} PERFORMANCE HISTORY`;
+        historyList.innerHTML = '';
+        const daysInMonth = new Date(selectedYear, monthsArr.indexOf(selectedMonth) + 1, 0).getDate();
+        let taskStats = {}; 
+
+        for(let i = 1; i <= daysInMonth; i++) {
+            const key = `${selectedYear}_${selectedMonth}_${i}`;
+            const dayTasks = allData[key] || [];
+            dayTasks.forEach(task => {
+                const taskName = task.text.trim();
+                if(!taskStats[taskName]) {
+                    taskStats[taskName] = { total: 0, done: 0 };
+                }
+                taskStats[taskName].total++;
+                if(task.done) taskStats[taskName].done++;
+            });
+        }
+
+        const sortedTasks = Object.keys(taskStats).sort();
+        if(sortedTasks.length === 0) {
+            historyList.innerHTML = '<div style="font-size:11px; color:#AAA; text-align:center;">No tasks recorded this month.</div>';
+            return;
+        }
+
+        sortedTasks.forEach(taskName => {
+            const stats = taskStats[taskName];
+            const accuracy = Math.round((stats.done / stats.total) * 100);
+            const div = document.createElement('div');
+            div.className = 'history-item';
+            div.innerHTML = `
+                <div class="history-task-name">${taskName}</div>
+                <div class="history-stats">
+                    <div class="history-perc">${accuracy}% Accuracy</div>
+                    <div class="history-count">Completed ${stats.done}/${stats.total} times</div>
+                </div>`;
+            historyList.appendChild(div);
+        });
+    }
+
+    function updateUI() {
+        document.querySelectorAll('.day-pill').forEach((p, idx) => {
+            p.classList.toggle('active', (idx + 1) === selectedDay);
+        });
+        document.getElementById('listTitle').innerText = `${selectedDay} ${selectedMonth} ${selectedYear} - TASKS`;
+        renderHabits();
+        loadNote();
+        updateChart();
+        calculateAchievements();
+        renderHeatmapAndStats();
+        renderPerformanceHistory();
+        localStorage.setItem('HabitPro_Daily_Mode', JSON.stringify(allData));
+    }
+
+    function renderHabits() {
+        const list = document.getElementById('habitList');
+        list.innerHTML = '';
+        const key = `${selectedYear}_${selectedMonth}_${selectedDay}`;
+        const habits = allData[key] || [];
+        habits.forEach((h, idx) => {
+            const row = document.createElement('div');
+            row.className = `habit-row`;
+            row.ondblclick = () => openEditModal(idx);
+            row.innerHTML = `
+                <div class="habit-label row-${idx % 5}">
+                    <div class="task-content">
+                        <span>${h.text}</span>
+                        <div class="task-meta">
+                           <span class="task-pts">${h.points || 1} pts</span>
+                           <span class="task-time">at ${h.time || '--:--'}</span>
+                        </div>
+                    </div>
+                    <span class="delete-btn" onclick="event.stopPropagation(); deleteHabit(${idx})">×</span>
+                </div>
+                <div class="habit-check-area">
+                    <div class="custom-checkbox ${h.done ? 'checked' : ''}" onclick="event.stopPropagation(); toggleHabit(${idx})"></div>
+                </div>`;
+            list.appendChild(row);
+        });
+    }
+
+    function openEditModal(idx) {
+        const key = `${selectedYear}_${selectedMonth}_${selectedDay}`;
+        currentEditIdx = idx;
+        const task = allData[key][idx];
+        document.getElementById('editInput').value = task.text;
+        document.getElementById('editPtsInput').value = task.points || 1;
+        document.getElementById('editModal').style.display = 'flex';
+        
+        document.getElementById('saveEditBtn').onclick = () => {
+            const newText = document.getElementById('editInput').value;
+            const newPts = document.getElementById('editPtsInput').value;
+            if(newText.trim() !== "") {
+                allData[key][currentEditIdx].text = newText.trim();
+                allData[key][currentEditIdx].points = parseFloat(newPts) || 0;
+                updateUI();
+                closeEditModal();
+                showToast("Updated!");
+            }
+        };
+    }
+
+    function closeEditModal() {
+        document.getElementById('editModal').style.display = 'none';
+        currentEditIdx = null;
+    }
+
+    function addHabit() {
+        const input = document.getElementById('habitInput');
+        const ptsInput = document.getElementById('ptsInput');
+        if(!input.value.trim()) return;
+        const now = new Date();
+        const timeStr = now.toLocaleString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true }).toLowerCase();
+        const key = `${selectedYear}_${selectedMonth}_${selectedDay}`;
+        if(!allData[key]) allData[key] = [];
+        allData[key].push({ text: input.value, done: false, time: timeStr, points: parseFloat(ptsInput.value) || 0 });
+        input.value = ''; ptsInput.value = '1';
+        updateUI(); showToast("Task Added!");
+    }
+
+    function toggleHabit(idx) {
+        const key = `${selectedYear}_${selectedMonth}_${selectedDay}`;
+        allData[key][idx].done = !allData[key][idx].done;
+        if(allData[key][idx].done) {
+            confetti({ particleCount: 30, spread: 50, origin: { y: 0.8 } });
+            showToast("Well Done! 🎉");
+        }
+        updateUI();
+    }
+
+    function deleteHabit(idx) {
+        const key = `${selectedYear}_${selectedMonth}_${selectedDay}`;
+        allData[key].splice(idx, 1);
+        updateUI(); showToast("Task Removed");
+    }
+
+    function saveNote() {
+        const key = `${selectedYear}_${selectedMonth}_${selectedDay}`;
+        notesData[key] = document.getElementById('dayNote').value;
+        localStorage.setItem('HabitPro_Notes_Daily', JSON.stringify(notesData));
+    }
+
+    function loadNote() {
+        const key = `${selectedYear}_${selectedMonth}_${selectedDay}`;
+        document.getElementById('dayNote').value = notesData[key] || '';
+    }
+
+    function initChart() {
+        const ctx = document.getElementById('habitChart').getContext('2d');
+        myChart = new Chart(ctx, {
+            type: 'line',
+            data: { labels: [], datasets: [{ data: [], borderColor: '#7E9CC7', backgroundColor: 'rgba(126, 156, 199, 0.2)', fill: true, tension: 0.4, pointRadius: 2 }] },
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } },
+                scales: { y: { beginAtZero: true, max: 100, ticks: { font: { size: 8 } } }, x: { grid: { display: false }, ticks: { font: { size: 8 } } } }
+            }
+        });
+    }
+
+    function updateChart() {
+        const daysInMonth = new Date(selectedYear, monthsArr.indexOf(selectedMonth) + 1, 0).getDate();
+        let labels = []; let scores = [];
+        for(let i=1; i<=daysInMonth; i++) {
+            labels.push(i);
+            const habits = allData[`${selectedYear}_${selectedMonth}_${i}`] || [];
+            scores.push(calculateDailyScore(habits));
+        }
+        myChart.data.labels = labels;
+        myChart.data.datasets[0].data = scores;
+        myChart.update();
+    }
+
+    function openExport() {
+        const data = { allData, notesData };
+        document.getElementById('modalTitle').innerText = "Backup Code";
+        document.getElementById('dataArea').value = btoa(JSON.stringify(data));
+        document.getElementById('modalBtn').innerText = "Copy";
+        document.getElementById('dataModal').style.display = 'flex';
+    }
+    function openRestore() {
+        document.getElementById('modalTitle').innerText = "Restore Data";
+        document.getElementById('dataArea').value = "";
+        document.getElementById('modalBtn').innerText = "Restore";
+        document.getElementById('dataModal').style.display = 'flex';
+    }
+    function processData() {
+        if(document.getElementById('modalBtn').innerText === "Copy") {
+            navigator.clipboard.writeText(document.getElementById('dataArea').value);
+            showToast("Copied to Clipboard!"); closeModal();
+        } else {
+            try {
+                const data = JSON.parse(atob(document.getElementById('dataArea').value));
+                allData = data.allData; notesData = data.notesData;
+                updateUI(); showToast("Data Restored!"); closeModal();
+            } catch(e) { showToast("Invalid Code!"); }
+        }
+    }
+    function closeModal() { document.getElementById('dataModal').style.display = 'none'; }
+
+
+    /* ==========================================
+       AI ASSISTANT LOGIC (NVIDIA API)
+       ========================================== */
+    function toggleAIChat() {
+        const modal = document.getElementById('aiChatModal');
+        if (modal.style.display === 'flex') {
+            modal.style.display = 'none';
+        } else {
+            modal.style.display = 'flex';
+            setTimeout(() => document.getElementById('aiInput').focus(), 100);
+        }
+    }
+
+    async function sendAIMessage() {
+        const inputField = document.getElementById('aiInput');
+        const text = inputField.value.trim();
+        if (!text) return;
+
+        inputField.value = '';
+        addMessageToChat('user', text);
+        
+        const typingIndicator = document.getElementById('aiTyping');
+        typingIndicator.style.display = 'block';
+        
+        try {
+            // Updated to call Nvidia API
+            const reply = await callNvidiaAPI(text);
+            addMessageToChat('bot', reply);
+        } catch (error) {
+            console.error("AI Error:", error);
+            addMessageToChat('bot', "I'm having a little trouble connecting to my servers right now. Please try again in a moment!");
+        } finally {
+            typingIndicator.style.display = 'none';
+        }
+    }
+
+    function addMessageToChat(sender, text) {
+        const msgs = document.getElementById('aiMessages');
+        const div = document.createElement('div');
+        div.className = `ai-msg ${sender}`;
+        
+        // Simple Markdown parsing for bold text and line breaks
+        let formattedText = text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+        formattedText = formattedText.replace(/\n/g, '<br>');
+        
+        div.innerHTML = formattedText;
+        msgs.appendChild(div);
+        
+        // Auto scroll to bottom
+        setTimeout(() => { msgs.scrollTop = msgs.scrollHeight; }, 50);
+    }
+
+    async function fetchWithBackoff(url, options, maxRetries = 5) {
+        let delay = 1000; // Start with 1 second
+        for (let i = 0; i < maxRetries; i++) {
+            try {
+                const response = await fetch(url, options);
+                if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
+                return await response.json();
+            } catch (e) {
+                if (i === maxRetries - 1) throw e;
+                await new Promise(res => setTimeout(res, delay));
+                delay *= 2; // Exponentially increase delay
+            }
+        }
+    }
+
+    // Changed from callGeminiAPI to callNvidiaAPI
+    async function callNvidiaAPI(userText) {
+        // Your Nvidia API Key
+        const apiKey = "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";
+        
+        // Nvidia NIM OpenAI-compatible endpoint
+        const url = "https://integrate.api.nvidia.com/v1/chat/completions";
+
+        // Gather Context from the App's UI state
+        const key = `${selectedYear}_${selectedMonth}_${selectedDay}`;
+        const habits = allData[key] || [];
+        
+        let contextText = `Today is ${selectedDay} ${selectedMonth} ${selectedYear}.\n\n`;
+        contextText += `USER'S TASKS FOR TODAY:\n`;
+        
+        if (habits.length === 0) {
+            contextText += "- No tasks created yet.\n";
+        } else {
+            habits.forEach(h => {
+                contextText += `- "${h.text}" (${h.points} pts) -> Status: ${h.done ? 'COMPLETED ✅' : 'PENDING ⏳'}\n`;
+            });
+            const score = calculateDailyScore(habits);
+            contextText += `\nCURRENT DAILY SCORE: ${score}%.\n`;
+        }
+
+        // OpenAI/Nvidia standard payload format
+        const payload = {
+            model: "meta/llama-3.1-8b-instruct", // Fast and efficient model on Nvidia NIM
+            messages: [
+                {
+                    role: "system",
+                    content: `You are a helpful, encouraging AI assistant integrated directly into the 'Habit Master Pro' application. 
+                    Your job is to motivate the user, provide tips on productivity, and help them manage their tasks.
+                    Keep your responses brief, friendly, and formatted neatly. Use emojis occasionally.
+                    
+                    Here is the live data about the user's schedule right now:\n\n${contextText}`
+                },
+                {
+                    role: "user",
+                    content: userText
+                }
+            ],
+            max_tokens: 512
+        };
+
+        const result = await fetchWithBackoff(url, {
+            method: 'POST',
+            headers: { 
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${apiKey}` // Nvidia uses Bearer authentication
+            },
+            body: JSON.stringify(payload)
+        });
+
+        // Parse response according to OpenAI/Nvidia format
+        return result.choices?.[0]?.message?.content || "Sorry, I am not quite sure how to answer that.";
+    }
+
+</script>
+</body>
+</html>
